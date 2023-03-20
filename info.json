@@ -1,10 +1,10 @@
 {
     "name": "exotic-industries-fueler",
     "version": "0.1.0",
-    "title": "Exotic Industries: fueler",
+    "title": "Exotic Industries: Fueler",
     "author": "PreLeyZero",
     "factorio_version": "1.1",
-    "description": "Adds fueler in the Exotic-Industries optic.",
+    "description": "Adds a auto fueling tower in the Exotic-Industries optic.",
     "dependencies": [
         "base >= 1.0.0"
     ]
