@@ -382,3 +382,9 @@ function model.updater()
 end
 
 return model
+
+-- TODO
+-- more UPS optimization
+-- add character handling
+-- add tech
+-- add gui
