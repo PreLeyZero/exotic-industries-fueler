@@ -381,6 +381,81 @@ function model.updater()
 
 end
 
+
+--GUI
+------------------------------------------------------------------------------------------------------
+
+function model.open_gui(player)
+
+    if player.gui.relative["ei_fueler-console"] then
+        model.close_gui(player)
+    end
+
+    local root = player.gui.relative.add{
+        type = "frame",
+        name = "ei_fueler-console",
+        anchor = {
+            gui = defines.relative_gui_type.container_gui,
+            name = "ei_fueler",
+            position = defines.relative_gui_position.right,
+        },
+        direction = "vertical",
+    }
+
+    do -- Titlebar
+        local titlebar = root.add{type = "flow", direction = "horizontal"}
+        titlebar.add{
+            type = "label",
+            caption = {"exotic-industries-fueler.fueler-gui-title"},
+            style = "frame_title",
+        }
+
+        titlebar.add{
+            type = "empty-widget",
+            style = "ei_titlebar_draggable_spacer",
+            ignored_by_interaction = true
+        }
+
+        titlebar.add{
+            type = "sprite-button",
+            sprite = "virtual-signal/informatron",
+            style = "frame_action_button",
+            tags = {
+                parent_gui = "ei_fueler-console",
+                action = "goto-informatron",
+                page = "fueler"
+            }
+        }
+    end
+
+    local main_container = root.add{
+        type = "frame",
+        name = "main-container",
+        direction = "vertical",
+        style = "inside_shallow_frame",
+    }
+
+    do -- control subheader
+        main_container.add{
+            type = "frame",
+            style = "ei_subheader_frame",
+        }.add{
+            type = "label",
+            caption = {"exotic-industries-fueler.fueler-gui-control-title"},
+            style = "subheader_caption_label",
+        }
+    
+        local control_flow = main_container.add{
+            type = "flow",
+            name = "control-flow",
+            direction = "vertical",
+            style = "ei_inner_content_flow",
+        }
+    end
+
+end
+
+
 return model
 
 -- TODO

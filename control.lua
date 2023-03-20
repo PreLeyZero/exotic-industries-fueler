@@ -8,6 +8,8 @@ ei_lib = require("lib/lib")
 
 local ei_fueler = require("scripts/fueler")
 
+ei_informatron = require("scripts/informatron")
+
 --====================================================================================================
 --EVENTS
 --====================================================================================================
@@ -41,6 +43,40 @@ end)
 
 script.on_event(defines.events.on_tick, function() 
     updater()
+end)
+
+
+--GUI RELATED
+------------------------------------------------------------------------------------------------------
+
+script.on_event(defines.events.on_gui_opened, function(event)
+    local name = event.entity and event.entity.name
+
+    if not name then
+        return
+    elseif name == "ei_fueler" then
+        ei_fueler.open_gui(game.get_player(event.player_index))
+    end
+end)
+
+
+script.on_event(defines.events.on_gui_closed, function(event)
+    local name = event.entity and event.entity.name
+    local element_name = event.element and event.element.name
+
+    if name == "ei_fueler" then
+        ei_fueler.close_gui(game.get_player(event.player_index))
+    end
+end)
+
+
+script.on_event(defines.events.on_gui_click, function(event)
+    local parent_gui = event.element.tags.parent_gui
+    if not parent_gui then return end
+
+    if parent_gui == "ei_fueler-console" then
+        ei_fueler.on_gui_click(event)
+    end
 end)
 
 
