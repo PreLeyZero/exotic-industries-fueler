@@ -38,7 +38,10 @@ data:extend({
         corpse = "small-remnants",
         collision_box = {{-1.4, -1.4}, {1.4, 1.4}},
         selection_box = {{-1.5, -1.5}, {1.5, 1.5}},
-        inventory_size = 4,
+        inventory_size = 10,
+        circuit_connector_sprites = data.raw["container"]["steel-chest"].circuit_connector_sprites,
+        circuit_wire_connection_point = data.raw["container"]["steel-chest"].circuit_wire_connection_point,
+        circuit_wire_max_distance = data.raw["container"]["steel-chest"].circuit_wire_max_distance,
         enable_inventory_bar = false,
         picture = {
             filename = ei_fueler_graphics_path.."64_red.png",
@@ -53,7 +56,7 @@ data:extend({
                 width = 256,
                 height = 256
             },
-            distance = 6
+            distance = settings.startup["ei_fueler_range"].value
         },
         
     },
@@ -63,5 +66,19 @@ data:extend({
         filename = ei_fueler_graphics_path.."64_empty.png",
         width = 64,
         height = 64,
+    },
+    {
+        name = "ei_vehicle",
+        type = "sprite",
+        filename = ei_fueler_graphics_path.."vehicle.png",
+        width = 40,
+        height = 40,
+    },
+    {
+        name = "ei_equipment",
+        type = "sprite",
+        filename = ei_fueler_graphics_path.."equipment.png",
+        width = 40,
+        height = 40,
     },
 })

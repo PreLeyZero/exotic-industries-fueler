@@ -90,15 +90,53 @@ function model.add_cooldown(entity)
 end
 
 
+function model.clone_fuel(itemstack, source_inv, target_inv, clearup_stack)
+
+    if not itemstack.valid_for_read then
+        return
+    end
+
+    if not target_inv.can_insert(itemstack.name) then
+        return
+    end
+
+    local count = target_inv.insert({name=itemstack.name, count=itemstack.count})
+    table.insert(clearup_stack, {itemstack.name, count})
+
+end
+
+
+function model.cleanup_clones(inv, clearup_stack)
+
+    -- remove the itemstacks that were inserted into the target inventory
+    for _, itemstack in ipairs(clearup_stack) do
+        inv.remove({name=itemstack[1], count=itemstack[2]})
+    end
+
+end
+
+
+function model.transfer_fuel(fueler_inventory, target_inventory)
+
+    local itemstacks_inserted = {}
+
+        for i=1, #fueler_inventory do
+
+            local itemstack = fueler_inventory[i]
+            model.clone_fuel(itemstack, fueler_inventory, target_inventory, itemstacks_inserted)
+    
+        end
+    
+    model.cleanup_clones(fueler_inventory, itemstacks_inserted)
+
+end
+
+
 function model.refuel_target(fueler, target, target_type)
 
     -- game.print("refueling target")
     -- game.print("fueler: " .. fueler.name)
     -- game.print("target: " .. target.name)
-
-    if target_type == "spidertron" then
-        target_type = "spider-vehicle"
-    end
 
     local fueler_inventory = fueler.get_inventory(defines.inventory.chest)
     local target_inventory = nil
@@ -113,41 +151,77 @@ function model.refuel_target(fueler, target, target_type)
         return
     end
 
-    if target_inventory.is_full() then
+    -- fueler -> target
+    if not fueler_inventory.is_empty() then
+        model.transfer_fuel(fueler_inventory, target_inventory)
+    end
+
+    -- target -> fueler
+    local result_inventory = target.get_burnt_result_inventory()
+
+    if not result_inventory then
         return
     end
 
-    if fueler_inventory.is_empty() then
+    if fueler_inventory.is_full() then
         return
     end
 
-    -- for every itemstack in the fueler inventory check if
-    -- this itemstack can be inserted into the target inventory
+    if not result_inventory.is_empty() then
+        model.transfer_fuel(result_inventory, fueler_inventory)
+    end
 
-    local itemstacks_inserted = {}
+end
 
-    for i=1, #fueler_inventory do
 
-        local itemstack = fueler_inventory[i]
+function model.refuel_equipments(fueler, target)
 
-        if itemstack.valid_for_read then
+    local fueler_inventory = fueler.get_inventory(defines.inventory.chest)
 
-            if target_inventory.can_insert(itemstack.name) then
-                local count = target_inventory.insert(itemstack.name)
+    if not target.grid then
+        return
+    end
 
-                table.insert(itemstacks_inserted, {itemstack.name, count})
+    local equipments = target.grid.equipment
 
-            end
-            
+    if #equipments == 0 then
+        return
+    end
+
+    -- for every equip in the target try to insert fuel from the fueler
+    for _, equipment in ipairs(equipments) do
+
+        if not equipment.valid then
+            goto continue
         end
 
-    end
+        if not equipment.burner then
+            goto continue
+        end
 
-    -- remove the itemstacks that were inserted into the target inventory
-    for _, itemstack in ipairs(itemstacks_inserted) do
-        fueler_inventory.remove({name=itemstack[1], count=itemstack[2]})
-    end
+        -- fueler -> target
+        local burner_inventory = equipment.burner.inventory
+        if not fueler_inventory.is_empty() then
+            model.transfer_fuel(fueler_inventory, burner_inventory)
+        end
 
+        -- target -> fueler
+        local result_inventory = equipment.burner.burnt_result_inventory
+        if not result_inventory then
+            goto continue
+        end
+
+        if fueler_inventory.is_full() then
+            goto continue
+        end
+
+        if not result_inventory.is_empty() then
+            model.transfer_fuel(result_inventory, fueler_inventory)
+        end
+
+        ::continue::
+
+    end
 
 end
 
@@ -239,11 +313,16 @@ function model.update_fueler(break_point)
     -- into all targets of that type
 
     local target_type = model.get_target_type(unit)
+    local equipment = model.get_equipment(unit)
+
+    if target_type == "spidertron" then
+        target_type = "spider-vehicle"
+    end
 
     -- get all entities of the target type in range
     local targets = fueler.surface.find_entities_filtered{
         position = fueler.position,
-        radius = 6,
+        radius = settings.startup["ei_fueler_range"].value,
         type = target_type,
     }
 
@@ -256,7 +335,11 @@ function model.update_fueler(break_point)
         end
 
         if not model.is_on_cooldown(target) then
-            model.refuel_target(fueler, target, target_type)
+            if equipment == false then
+                model.refuel_target(fueler, target, target_type)
+            else
+                model.refuel_equipments(fueler, target)
+            end
             model.add_cooldown(target)
         end
 
@@ -297,7 +380,31 @@ function model.set_target_type(unit, target_type)
 
     global.ei.fueler[unit].target_type = target_type
 
-    game.print("Set target type to: " .. target_type)
+    -- game.print("Set target type to: " .. target_type)
+
+end
+
+
+function model.get_equipment(unit)
+
+    local equipment = global.ei.fueler[unit].equipment
+
+    if not equipment then
+        equipment = false
+    end
+
+    return equipment
+
+end
+
+
+function model.set_equipment(unit, equipment)
+
+    if not equipment then
+        equipment = false
+    end
+
+    global.ei.fueler[unit].equipment = equipment
 
 end
 
@@ -474,6 +581,7 @@ function model.open_gui(player)
         control_flow.add{
             type = "label",
             caption = {"exotic-industries-fueler.fueler-gui-control-description"},
+            tooltip = {"exotic-industries-fueler.fueler-gui-control-description-tooltip"},
         }
 
         local button_frame = control_flow.add{
@@ -494,8 +602,44 @@ function model.open_gui(player)
                 style = "ei_slot_button_radio"
             }
         end
+        control_flow.add{type = "empty-widget", style = "ei_vertical_pusher"}
+
+        control_flow.add{
+            type = "label",
+            caption = {"exotic-industries-fueler.fueler-gui-equipment-description"},
+            tooltip = {"exotic-industries-fueler.fueler-gui-equipment-description-tooltip"},
+        }
+
+        local equipment_frame = control_flow.add{
+            type = "frame",
+            name = "equipment-frame",
+            style = "slot_button_deep_frame"
+        }
+        equipment_frame.add{
+            type = "sprite-button",
+            sprite = "ei_vehicle",
+            tooltip = {"exotic-industries-fueler.vehicle"},
+            tags = {
+                action = "set-equipment-type",
+                parent_gui = "ei_fueler-console",
+                equipment_type = false
+            },
+            style = "ei_slot_button_radio"
+        }
+        equipment_frame.add{
+            type = "sprite-button",
+            sprite = "ei_equipment",
+            tooltip = {"exotic-industries-fueler.equipment"},
+            tags = {
+                action = "set-equipment-type",
+                parent_gui = "ei_fueler-console",
+                equipment_type = true
+            },
+            style = "ei_slot_button_radio"
+        }
 
         control_flow.add{type = "empty-widget", style = "ei_vertical_pusher"}
+        
 
     end
 
@@ -519,11 +663,22 @@ function model.update_gui(player)
     -- get sync
     local fueler_unit = player.opened.unit_number
     local target = model.get_target_type(fueler_unit)
+    local equipment = model.get_equipment(fueler_unit)
 
     -- update gui
-    target_frame.tags = {selected = target}
+    -- target_frame.tags = {selected = target}
     for _, elem in pairs(target_frame.children) do
         if elem.tags.target_type == target then
+            elem.enabled = false
+        else
+            elem.enabled = true
+        end
+    end
+
+    local equipment_frame = control["equipment-frame"]
+    -- equipment_frame.tags = {selected = equipment}
+    for _, elem in pairs(equipment_frame.children) do
+        if elem.tags.equipment_type == equipment then
             elem.enabled = false
         else
             elem.enabled = true
@@ -541,14 +696,6 @@ end
 
 
 function model.on_gui_click(event)
-    if event.element.tags.action == "goto-informatron" then 
-        remote.call("informatron", "informatron_open_to_page", {
-            player_index = event.player_index,
-            interface = "exotic-industries-fueler-informatron",
-            page_name = event.element.tags.page
-        })
-    end
-
     if event.element.tags.action == "set-target-type" then
         local player = game.players[event.player_index]
         local root = player.gui.relative["ei_fueler-console"]
@@ -561,7 +708,40 @@ function model.on_gui_click(event)
 
         model.set_target_type(fueler_unit, target)
 
+        -- if new target type is player then set equipment to true
+        if target == "character" then
+            model.set_equipment(fueler_unit, true)
+        end
+
         model.update_gui(player)
+    end
+
+    if event.element.tags.action == "set-equipment-type" then
+        local player = game.players[event.player_index]
+        local root = player.gui.relative["ei_fueler-console"]
+        if not root then
+            return
+        end
+
+        local fueler_unit = player.opened.unit_number
+        local equipment_type = event.element.tags.equipment_type
+
+        -- dont let player set equipment to false if target is player
+        if equipment_type == false and model.get_target_type(fueler_unit) == "character" then
+            return
+        end
+
+        model.set_equipment(fueler_unit, equipment_type)
+
+        model.update_gui(player)
+    end
+
+    if event.element.tags.action == "goto-informatron" then 
+        remote.call("informatron", "informatron_open_to_page", {
+            player_index = event.player_index,
+            interface = "exotic-industries-fueler-informatron",
+            page_name = event.element.tags.page
+        })
     end
 end
 
