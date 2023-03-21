@@ -21,7 +21,7 @@ data:extend({
         ingredients = {
             {"iron-plate", 10},
             {"iron-gear-wheel", 5},
-            {"electronic-circuit", 5},
+            {"gun-turret", 1},
         },
         result = "ei_fueler",
         result_count = 1,
