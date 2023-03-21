@@ -108,10 +108,15 @@ end
 
 function model.cleanup_clones(inv, clearup_stack)
 
+    local action = false
+
     -- remove the itemstacks that were inserted into the target inventory
     for _, itemstack in ipairs(clearup_stack) do
         inv.remove({name=itemstack[1], count=itemstack[2]})
+        action = true
     end
+
+    return action
 
 end
 
@@ -127,7 +132,25 @@ function model.transfer_fuel(fueler_inventory, target_inventory)
     
         end
     
-    model.cleanup_clones(fueler_inventory, itemstacks_inserted)
+    local action = model.cleanup_clones(fueler_inventory, itemstacks_inserted)
+
+    return action
+
+end
+
+
+function model.cast_beam(fueler, target)
+
+    -- create a beam between the fueler and the target
+    local beam = fueler.surface.create_entity({
+        name = "ei_fuel-beam",
+        position = fueler.position,
+        source_offset = {0, -1},
+        source = fueler,
+        target = target,
+        duration = 30,
+        force = fueler.force,
+    })
 
 end
 
@@ -153,7 +176,10 @@ function model.refuel_target(fueler, target, target_type)
 
     -- fueler -> target
     if not fueler_inventory.is_empty() then
-        model.transfer_fuel(fueler_inventory, target_inventory)
+        local action = model.transfer_fuel(fueler_inventory, target_inventory)
+        if action then
+            model.cast_beam(fueler, target)
+        end
     end
 
     -- target -> fueler
@@ -168,7 +194,10 @@ function model.refuel_target(fueler, target, target_type)
     end
 
     if not result_inventory.is_empty() then
-        model.transfer_fuel(result_inventory, fueler_inventory)
+        local action = model.transfer_fuel(result_inventory, fueler_inventory)
+        if action then
+            model.cast_beam(fueler, target)
+        end
     end
 
 end
@@ -202,7 +231,10 @@ function model.refuel_equipments(fueler, target)
         -- fueler -> target
         local burner_inventory = equipment.burner.inventory
         if not fueler_inventory.is_empty() then
-            model.transfer_fuel(fueler_inventory, burner_inventory)
+            local action = model.transfer_fuel(fueler_inventory, burner_inventory)
+            if action then
+                model.cast_beam(fueler, target)
+            end
         end
 
         -- target -> fueler
@@ -216,7 +248,10 @@ function model.refuel_equipments(fueler, target)
         end
 
         if not result_inventory.is_empty() then
-            model.transfer_fuel(result_inventory, fueler_inventory)
+            local action = model.transfer_fuel(result_inventory, fueler_inventory)
+            if action then
+                model.cast_beam(fueler, target)
+            end
         end
 
         ::continue::

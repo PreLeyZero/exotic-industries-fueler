@@ -6,10 +6,10 @@ data:extend({
     {
         name = "ei_fueler",
         type = "item",
-        icon = ei_fueler_graphics_path.."64_empty.png",
+        icon = ei_fueler_graphics_path.."fueler_icon.png",
         icon_size = 64,
-        subgroup = "production-machine",
-        order = "x",
+        subgroup = "train-transport",
+        order = "0",
         place_result = "ei_fueler",
         stack_size = 10,
     },
@@ -25,12 +25,33 @@ data:extend({
         },
         result = "ei_fueler",
         result_count = 1,
-        enabled = true,
+        enabled = false,
+    },
+    {
+        name = "ei_fueler",
+        type = "technology",
+        icon = ei_fueler_graphics_path.."fueler_tech.png",
+        icon_size = 256,
+        prerequisites = {"steel-processing"},
+        effects = {
+            {
+                type = "unlock-recipe",
+                recipe = "ei_fueler"
+            }
+        },
+        unit = {
+            count = 50,
+            ingredients = {
+                {"automation-science-pack", 1},
+            },
+            time = 20
+        },
+        age = "steam-age",
     },
     {
         name = "ei_fueler",
         type = "container",
-        icon = ei_fueler_graphics_path.."64_empty.png",
+        icon = ei_fueler_graphics_path.."fueler_icon.png",
         icon_size = 64,
         flags = {"placeable-neutral", "player-creation"},
         minable = {mining_time = 0.2, result = "ei_fueler"},
@@ -44,11 +65,11 @@ data:extend({
         circuit_wire_max_distance = data.raw["container"]["steel-chest"].circuit_wire_max_distance,
         enable_inventory_bar = false,
         picture = {
-            filename = ei_fueler_graphics_path.."64_red.png",
-            priority = "extra-high",
-            width = 64,
-            height = 64,
-            shift = {0, 0},
+            filename = ei_fueler_graphics_path.."fueler_picture.png",
+            width = 512,
+            height = 512,
+            shift = {0,-0.2},
+	        scale = 0.5/2,
         },
         radius_visualisation_specification = {
             sprite = {
@@ -63,9 +84,9 @@ data:extend({
     {
         name = "ei_fueler-sprite",
         type = "sprite",
-        filename = ei_fueler_graphics_path.."64_empty.png",
-        width = 64,
-        height = 64,
+        filename = ei_fueler_graphics_path.."fueler_picture.png",
+        width = 512,
+        height = 512
     },
     {
         name = "ei_vehicle",
@@ -82,3 +103,9 @@ data:extend({
         height = 40,
     },
 })
+
+local fuel_beam = table.deepcopy(data.raw["beam"]["electric-beam"])
+fuel_beam.name = "ei_fuel-beam"
+fuel_beam.action = nil
+
+data:extend({fuel_beam})
