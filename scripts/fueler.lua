@@ -7,10 +7,9 @@ local model = {}
 model.target_types = {
     "locomotive",
     "car",
+    "spidertron", -- needed for EI changes
     "character", -- refering to player equipment
-    "spider-vehicle", -- needed for EI changes
 }
-
 
 --UTIL
 ------------------------------------------------------------------------------------------------------
@@ -96,6 +95,10 @@ function model.refuel_target(fueler, target, target_type)
     -- game.print("refueling target")
     -- game.print("fueler: " .. fueler.name)
     -- game.print("target: " .. target.name)
+
+    if target_type == "spidertron" then
+        target_type = "spider-vehicle"
+    end
 
     local fueler_inventory = fueler.get_inventory(defines.inventory.chest)
     local target_inventory = nil
@@ -282,6 +285,22 @@ function model.get_target_type(unit)
 
 end
 
+
+function model.set_target_type(unit, target_type)
+
+    -- set the current entity type that this fueler is fueling
+    -- if none id given then set the default type (locomotive)
+
+    if not target_type then
+        target_type = model.target_types[1]
+    end
+
+    global.ei.fueler[unit].target_type = target_type
+
+    game.print("Set target type to: " .. target_type)
+
+end
+
 --REGISTER
 ------------------------------------------------------------------------------------------------------
 
@@ -423,7 +442,7 @@ function model.open_gui(player)
             tags = {
                 parent_gui = "ei_fueler-console",
                 action = "goto-informatron",
-                page = "fueler"
+                page = "exotic-industries-fueler-informatron"
             }
         }
     end
@@ -451,8 +470,99 @@ function model.open_gui(player)
             direction = "vertical",
             style = "ei_inner_content_flow",
         }
+
+        control_flow.add{
+            type = "label",
+            caption = {"exotic-industries-fueler.fueler-gui-control-description"},
+        }
+
+        local button_frame = control_flow.add{
+            type = "frame",
+            name = "target-frame",
+            style = "slot_button_deep_frame"
+        }
+        for _, target_name in ipairs(model.target_types) do
+            button_frame.add{
+                type = "sprite-button",
+                sprite = "entity/" .. target_name,
+                tooltip = {"entity-name." .. target_name},
+                tags = {
+                    action = "set-target-type",
+                    parent_gui = "ei_fueler-console",
+                    target_type = target_name
+                },
+                style = "ei_slot_button_radio"
+            }
+        end
+
+        control_flow.add{type = "empty-widget", style = "ei_vertical_pusher"}
+
     end
 
+    model.update_gui(player)
+
+end
+
+
+function model.update_gui(player)
+
+    -- sync gui with current setting of tower
+
+    local root = player.gui.relative["ei_fueler-console"]
+    if not root then
+        return
+    end
+
+    local control = root["main-container"]["control-flow"]
+    local target_frame = control["target-frame"]
+
+    -- get sync
+    local fueler_unit = player.opened.unit_number
+    local target = model.get_target_type(fueler_unit)
+
+    -- update gui
+    target_frame.tags = {selected = target}
+    for _, elem in pairs(target_frame.children) do
+        if elem.tags.target_type == target then
+            elem.enabled = false
+        else
+            elem.enabled = true
+        end
+    end
+
+end
+
+
+function model.close_gui(player)
+    if player.gui.relative["ei_fueler-console"] then
+        player.gui.relative["ei_fueler-console"].destroy()
+    end
+end
+
+
+function model.on_gui_click(event)
+    if event.element.tags.action == "goto-informatron" then 
+        remote.call("informatron", "informatron_open_to_page", {
+            player_index = event.player_index,
+            interface = "exotic-industries-fueler-informatron",
+            page_name = event.element.tags.page
+        })
+    end
+
+    if event.element.tags.action == "set-target-type" then
+        local player = game.players[event.player_index]
+        local root = player.gui.relative["ei_fueler-console"]
+        if not root then
+            return
+        end
+
+        local fueler_unit = player.opened.unit_number
+        local target = event.element.tags.target_type
+
+        model.set_target_type(fueler_unit, target)
+
+        model.update_gui(player)
+    end
 end
 
 

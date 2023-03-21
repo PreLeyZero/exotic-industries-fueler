@@ -11,5 +11,6 @@ require("lib/paths")
 --====================================================================================================
 
 -- add new fueler
-
 require("prototypes/fueler")
+-- add styles
+require("prototypes/styles")
