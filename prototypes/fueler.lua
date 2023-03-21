@@ -56,5 +56,12 @@ data:extend({
             distance = 6
         },
         
-    }
+    },
+    {
+        name = "ei_fueler-sprite",
+        type = "sprite",
+        filename = ei_fueler_graphics_path.."64_empty.png",
+        width = 64,
+        height = 64,
+    },
 })
