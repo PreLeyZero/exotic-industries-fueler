@@ -279,6 +279,12 @@ function model.get_break_point()
 
     if break_point then
 
+        -- if no element in fueler_queue then return nil and reset the break point
+        if not next(global.ei.fueler_queue) then
+            global.ei.fueler_break_point = nil
+            return nil
+        end
+
         -- try to move the break point forward one step
         if next(global.ei.fueler_queue, break_point) then
             global.ei.fueler_break_point,_ = next(global.ei.fueler_queue, break_point)
