@@ -112,6 +112,8 @@ function on_destroyed_entity(e)
         return
     end
 
-    ei_fueler.on_destroyed_entity(e["entity"])
+    local transfer = nil or e["robot"] or e["player_index"]
+
+    ei_fueler.on_destroyed_entity(e["entity"], transfer)
 
 end
